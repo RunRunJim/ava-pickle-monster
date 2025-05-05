@@ -3,6 +3,7 @@ window.onload = () => {
   const ctx = canvas.getContext("2d");
   const chompSound = new Audio("assets/chomp.mp3");
   const thankYouSound = new Audio("assets/thankyou.mp3");
+  const avaThankYouSound = new Audio("assets/ava-thankyou.mp3"); // your new file
 
   const pickles = [];
   const monsterImg = new Image();
@@ -76,33 +77,41 @@ window.onload = () => {
   }
 
   function moveMonster() {
-    if (pickles.length === 0) {
-      monsterMoving = false;
+  if (pickles.length === 0) {
+    monsterMoving = false;
+
+    // 🔊 Play a different sound if Ava was selected
+    if (selectedCharacter === "ava.png") {
+      avaThankYouSound.play();
+    } else {
       thankYouSound.play();
-
-      const message = document.createElement("div");
-      message.textContent = "Thank you!";
-      message.style.position = "absolute";
-      message.style.top = "40%";
-      message.style.left = "50%";
-      message.style.transform = "translate(-50%, -50%)";
-      message.style.background = "rgba(255, 255, 255, 0.9)";
-      message.style.padding = "20px 30px";
-      message.style.borderRadius = "16px";
-      message.style.fontSize = "2rem";
-      message.style.color = "#333";
-      message.style.zIndex = 5;
-      message.style.textAlign = "center";
-      document.getElementById("game-area").appendChild(message);
-
-      setTimeout(() => {
-        message.style.transition = "opacity 1s ease";
-        message.style.opacity = 0;
-        setTimeout(() => message.remove(), 1000);
-      }, 3000);
-
-      return;
     }
+
+    // 🎉 Show "Thank you!" message
+    const message = document.createElement("div");
+    message.textContent = "Thank you!";
+    message.style.position = "absolute";
+    message.style.top = "40%";
+    message.style.left = "50%";
+    message.style.transform = "translate(-50%, -50%)";
+    message.style.background = "rgba(255, 255, 255, 0.9)";
+    message.style.padding = "20px 30px";
+    message.style.borderRadius = "16px";
+    message.style.fontSize = "2rem";
+    message.style.color = "#333";
+    message.style.zIndex = 5;
+    message.style.textAlign = "center";
+    document.getElementById("game-area").appendChild(message);
+
+    // 🕒 Fade out after 3 seconds
+    setTimeout(() => {
+      message.style.transition = "opacity 1s ease";
+      message.style.opacity = 0;
+      setTimeout(() => message.remove(), 1000);
+    }, 3000);
+
+    return;
+  }
 
     const target = pickles.shift();
     const steps = 50;
