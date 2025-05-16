@@ -4,7 +4,7 @@ window.onload = () => {
   const chompSound = new Audio("assets/chomp.mp3");
   const thankYouSound = new Audio("assets/thankyou.mp3");
   const avaThankYouSound = new Audio("assets/ava-thankyou.mp3");
-  const placePickleSound = new Audio("assets/pickleplace.mp3"); // Added new sound for pickle placement
+  const placePickleSound = new Audio("assets/pickleplace.mp3");
 
   const pickles = [];
   const monsterImg = new Image();
@@ -23,6 +23,7 @@ window.onload = () => {
   let pickleCount = 0;
   let pickleEatenCount = 0; // Counter for eaten pickles
   let thankYouPlayed = false; // Flag to track if the thank you sound has played
+  let bounceInterval; // For character bouncing animation
 
   // Create the counter element
   const counterElement = document.createElement("div");
@@ -38,6 +39,22 @@ window.onload = () => {
   counterElement.style.zIndex = 3;
   counterElement.style.boxShadow = "0 2px 10px rgba(0, 0, 0, 0.2)";
   counterElement.textContent = "Pickles: 0";
+
+  // Add CSS for animations
+  const styleSheet = document.createElement("style");
+  styleSheet.type = "text/css";
+  styleSheet.innerText = `
+    @keyframes sparkleAnim {
+      0% { transform: scale(0.2) rotate(0deg); opacity: 0; }
+      50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+      100% { transform: scale(1) rotate(360deg); opacity: 0; }
+    }
+    @keyframes fall {
+      0% { transform: translateY(0) rotate(0deg); }
+      100% { transform: translateY(100vh) rotate(360deg); }
+    }
+  `;
+  document.head.appendChild(styleSheet);
 
   // Get reference to the call monster button
   const callMonsterButton = document.getElementById("call-monster");
@@ -72,6 +89,99 @@ window.onload = () => {
     }
   }
 
+  // ENHANCEMENT 1: Visual Feedback - Sparkle Effect
+  function createSparkle(x, y) {
+    const sparkle = document.createElement("div");
+    sparkle.style.position = "absolute";
+    sparkle.style.left = `${x}px`;
+    sparkle.style.top = `${y}px`;
+    sparkle.style.width = "50px";
+    sparkle.style.height = "50px";
+    sparkle.style.backgroundColor = "#FFD700";
+    sparkle.style.borderRadius = "50%";
+    sparkle.style.zIndex = "4";
+    sparkle.style.pointerEvents = "none";
+    sparkle.style.boxShadow = "0 0 10px 5px rgba(255, 215, 0, 0.7)";
+    sparkle.style.animation = "sparkleAnim 0.7s forwards";
+    document.getElementById("game-area").appendChild(sparkle);
+
+    // Remove after animation
+    setTimeout(() => {
+      try {
+        document.getElementById("game-area").removeChild(sparkle);
+      } catch (e) {
+        // Element might have been removed already
+      }
+    }, 700);
+  }
+
+  // ENHANCEMENT 3: Confetti Effect
+  function createConfetti() {
+    for (let i = 0; i < 50; i++) {
+      const confetti = document.createElement("div");
+      confetti.style.position = "absolute";
+      confetti.style.width = "15px";
+      confetti.style.height = "15px";
+      confetti.style.backgroundColor = getRandomColor();
+      confetti.style.borderRadius = "50%";
+      confetti.style.left = `${Math.random() * 100}%`;
+      confetti.style.top = "-20px";
+      confetti.style.opacity = "0.8";
+      confetti.style.zIndex = "4";
+      confetti.style.pointerEvents = "none";
+
+      // Random initial positions and speeds
+      const speed = 2 + Math.random() * 5;
+      const angle = Math.random() * Math.PI * 2;
+      const speedX = Math.cos(angle) * 2;
+
+      // Animation
+      confetti.style.animation = `fall ${speed}s linear forwards`;
+      document.getElementById("game-area").appendChild(confetti);
+
+      // Remove after animation
+      setTimeout(() => {
+        try {
+          document.getElementById("game-area").removeChild(confetti);
+        } catch (e) {
+          // Element might have been removed already
+        }
+      }, speed * 1000);
+    }
+  }
+
+  function getRandomColor() {
+    const colors = ["#FF9AA2", "#FFB7B2", "#FFDAC1", "#E2F0CB", "#B5EAD7", "#C7CEEA"];
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  // ENHANCEMENT 2: Character Bounce Animation
+  function startCharacterBounce() {
+    if (bounceInterval) clearInterval(bounceInterval);
+
+    let direction = 1;
+    let offset = 0;
+
+    bounceInterval = setInterval(() => {
+      offset += (0.2 * direction);
+      if (offset > 5 || offset < 0) direction *= -1;
+
+      // Only apply bounce if character isn't moving
+      if (!characterMoving && !monsterMoving && selectedCharacter) {
+        const baseY = 300; // Original character Y position
+        characterY = baseY + offset;
+        drawScene();
+      }
+    }, 50);
+  }
+
+  function stopCharacterBounce() {
+    if (bounceInterval) {
+      clearInterval(bounceInterval);
+      bounceInterval = null;
+    }
+  }
+
   function enableGame() {
     canvas.addEventListener("click", (e) => {
       // Only allow placing pickles if not at the max and character not currently moving
@@ -94,6 +204,9 @@ window.onload = () => {
           callMonsterButton.style.cursor = "pointer";
         }
 
+        // Temporarily stop bouncing while moving
+        stopCharacterBounce();
+
         // Move character to place the pickle
         characterMoving = true;
         moveCharacterToPlacePickle(targetX, targetY);
@@ -104,6 +217,9 @@ window.onload = () => {
 
     callMonsterButton.addEventListener("click", () => {
       if (!monsterMoving && pickles.length > 0) {
+        // Stop bouncing when character moves off screen
+        stopCharacterBounce();
+
         // First move character off screen
         characterMoving = true;
         moveCharacterOffScreen(() => {
@@ -177,8 +293,14 @@ window.onload = () => {
         placePickleSound.currentTime = 0;
         placePickleSound.play();
 
+        // Create visual sparkle effect at pickle location
+        createSparkle(targetX + 25, targetY + 25);
+
         drawScene();
         characterMoving = false;
+
+        // Resume bouncing after placing pickle
+        startCharacterBounce();
       }
     }, 20);
   }
@@ -206,6 +328,9 @@ window.onload = () => {
     if (pickles.length === 0) {
       monsterMoving = false;
 
+      // Create confetti effect when all pickles are eaten
+      createConfetti();
+
       // Show "Thank you!" message
       const message = document.createElement("div");
       message.textContent = "Thank you!";
@@ -218,7 +343,7 @@ window.onload = () => {
       message.style.borderRadius = "16px";
       message.style.fontSize = "2rem";
       message.style.color = "#333";
-      message.style.zIndex = 5;
+      message.style.zIndex = "5";
       message.style.textAlign = "center";
       document.getElementById("game-area").appendChild(message);
 
@@ -260,6 +385,9 @@ window.onload = () => {
                   if (document.getElementById("game-area").contains(counterElement)) {
                     document.getElementById("game-area").removeChild(counterElement);
                   }
+
+                  // Start character bouncing again
+                  startCharacterBounce();
                 }
               }, 20);
             }
@@ -334,9 +462,12 @@ window.onload = () => {
 
       resizeCanvas();
       drawScene();
+
+      // Start character bouncing animation
+      startCharacterBounce();
     });
   });
-};
+}
 
 
 
